@@ -222,21 +222,21 @@ body {
   display: flex;
   background: #f8f8f8;
   width: 100%;
+  height: 100vh;
 }
 
 .video-area {
-  flex-wrap: wrap;
   justify-content: center;
   align-items: center;
   display: flex;
   flex-direction: column;
-  padding: 1.5rem;
+  padding: 0 1.5rem;
   width: 100%;
 }
 
 #localVideo {
   width: 100%;
-  height: 450px;
+  height: 550px;
   border: 4px solid #2149f3;
   object-fit: cover;
   border-radius: 10px;
@@ -364,7 +364,7 @@ body {
 
 .left {
   width: 75%;
-  height: auto;
+  height: 100vh;
   overflow: auto;
 }
 
@@ -376,15 +376,17 @@ body {
 
 .vide_sec {
   display: flex;
-  height: 90vh;
+  height: 100vh;
   width: 100%;
-  overflow-y: scroll;
+  overflow-y: hidden;
 }
 .local_videos{
   width: 100%;
+  position: relative;
 }
 .container_custom{
   width: 100%;
+  overflow: hidden;
 }
 
 .transparent_scroll {
@@ -486,4 +488,61 @@ body {
     transform: translateX(200px);
     opacity: 0;
   }
+}
+
+.local-video-name{
+
+}
+.local_controls{
+  position: absolute;
+  bottom: 2rem;
+  width: 100%;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+}
+.local_controls .left_sec{
+  width: 48%;
+}
+.left_sec ul{
+  display: flex;
+  margin: 0;
+}
+
+.left_sec ul li{
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 0 10px;
+}
+.local_controls .right_sec{
+  width: 48%;
+}
+#localUsername{background: #fff;padding: 0 20px;color: #2149f3;border-radius: 20px;font-size: 13px;letter-spacing: 1px;font-weight: 600;border: 1px solid;}
+.single-user #localVideo{
+  height: calc(100vh - 15vh); 
+}
+.action_buttons{
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #2149f3;
+  overflow: hidden;
+}
+.action_buttons button{
+  width: 40px;
+  height: 40px;
+  background: transparent;
+  border: none;
+  color: #fff;
+}
+.action_buttons i{
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+#leaveRoomBtn{
+  background: red;
 }

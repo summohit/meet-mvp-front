@@ -97,6 +97,8 @@ function setupSocketListeners() {
         log(`✅ Joined room: ${roomName} as ${username}`);
         log(`👥 Users in room: ${existingUsers.length + 1}`);
         joinVideoCall(roomName, username, existingUsers);
+        
+        
       } catch (err) {
         showError(`Join room error: ${err.message}`);
       }
@@ -158,21 +160,30 @@ function setupSocketListeners() {
     socket.on("answer", async ({ from, answer, username }) => {
       try {
         const peer = peers.get(from);
-        if (peer) {
-          await peer.setRemoteDescription(new RTCSessionDescription(answer));
-          // Update the peer's username if we got it from the answer
-          if (username && username !== 'Unknown') {
-            updatePeerUsername(from, username);
-          }
-          log(`📞 Got answer from ${username || peer.userName || 'Unknown'}`);
-        } else {
+        if (!peer) {
           console.warn(`No peer found for ${from} when receiving answer`);
+          return;
         }
+    
+        if (peer.signalingState !== "have-local-offer") {
+          console.warn(
+            `⚠️ Skipping setRemoteDescription: Invalid signaling state (${peer.signalingState}) for peer ${from}`
+          );
+          return;
+        }
+    
+        await peer.setRemoteDescription(new RTCSessionDescription(answer));
+    
+        if (username && username !== "Unknown") {
+          updatePeerUsername(from, username);
+        }
+    
+        log(`📞 Got answer from ${username || peer.userName || "Unknown"}`);
       } catch (error) {
         showError(`Answer error: ${error.message}`);
       }
     });
-
+    
     socket.on("ice-candidate", ({ from, candidate }) => {
       try {
         const peer = peers.get(from);
@@ -183,6 +194,15 @@ function setupSocketListeners() {
         showError(`ICE candidate error: ${err.message}`);
       }
     });
+    socket.on('user-count-updated', ({ count }) => {
+      log(`👥 Total users in room: ${count}`);
+      // updateUserCountUI(count);
+      const wrapper = document.getElementById('local_video_wrapper');
+      if (wrapper && count > 1) {
+        wrapper.classList.remove('single-user');
+      }
+    });
+    
   } catch (err) {
     showError(`Socket setup error: ${err.message}`);
   }
@@ -208,40 +228,22 @@ async function joinVideoCall(roomName, username, existingUsers = []) {
     existingUsers.forEach(user => {
       createOfferForUser(user.socketId, user.username);
     });
-
+   
     log(`🎉 Ready in room: ${roomName}`);
   } catch (error) {
     showError(`Media error: ${error.message}`);
   }
 }
 
-function displayLocalVideoName(username) {
-  // Remove existing name tag if any
-  const existingNameTag = document.querySelector('.local-video-name');
-  if (existingNameTag) {
-    existingNameTag.remove();
-  }
 
-  // Create and add name tag for local video
-  const localVideoContainer = localVideo.parentElement;
-  const nameTag = document.createElement("div");
-  nameTag.textContent = `${username} (You)`;
-  nameTag.classList.add("local-video-name");
-  nameTag.style.cssText = `
-    position: absolute;
-    bottom: 10px;
-    left: 10px;
-    background: rgba(0, 0, 0, 0.7);
-    color: white;
-    padding: 5px 10px;
-    border-radius: 5px;
-    font-size: 14px;
-    z-index: 10;
-  `;
-  
-  // Make sure the local video container has relative positioning
-  localVideoContainer.style.position = 'relative';
-  localVideoContainer.appendChild(nameTag);
+function displayLocalVideoName(username) {
+  try {
+    const nameTag = document.getElementById("localUsername");
+    nameTag.textContent = `${username} (You)`;
+    nameTag.classList.add("local-video-name");
+  } catch (error) {
+    console.log(error);
+  }
 }
 
 function createPeerConnection(userId, userName) {
@@ -279,7 +281,7 @@ function createPeerConnection(userId, userName) {
         video.autoplay = true;
         video.playsInline = true;
         video.style.width = "250px";
-        video.style.height = "180px";
+        video.style.height = "200px";
         video.style.border = "1px solid #ccc";
         video.style.borderRadius = "8px";
         video.srcObject = event.streams[0];
