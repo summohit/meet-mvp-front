@@ -1,4 +1,4 @@
-const socket = io("http://192.168.1.2:3000"); // Backend Socket.IO URL
+const socket = io("https://ttu-meet-mvp-node.onrender.com"); // Backend Socket.IO URL
 
 const localVideo = document.getElementById("localVideo");
 const remoteVideo = document.getElementById("remoteVideo");
