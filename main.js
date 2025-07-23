@@ -1,122 +1,122 @@
-const socket = io("https://ttu-meet-mvp-node.onrender.com"); // Backend Socket.IO URL
+// const socket = io("https://ttu-meet-mvp-node.onrender.com");
+const socket = io("http://localhost:3000");
+
 
 const localVideo = document.getElementById("localVideo");
-const remoteVideo = document.getElementById("remoteVideo");
-
-let localStream;
-let remoteStream;
-let peerConnection;
+const videos = document.getElementById("videos");
+const logPanel = document.getElementById("logPanel");
+const peers = new Map();
 
 const config = {
-  // iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
-   iceServers : [
-      { urls: 'stun:uatstun.tingtingu.com:3478' },
-      {
-        urls: 'turns:uatturn.tingtingu.com:5349?transport=udp',
-        username: 'admin',
-        credential: '12345'
-      },
-      {
-        urls: 'turns:uatturn.tingtingu.com:5349?transport=tcp',
-        username: 'admin',
-        credential: '12345'
-      }
+  iceServers: [
+    { urls: 'stun:uatstun.tingtingu.com:3478' },
+    {
+      urls: 'turns:uatturn.tingtingu.com:5349?transport=udp',
+      username: 'admin',
+      credential: '12345'
+    },
+    {
+      urls: 'turns:uatturn.tingtingu.com:5349?transport=tcp',
+      username: 'admin',
+      credential: '12345'
+    }
   ]
 };
 
+let localStream;
 const room = "test-room";
 
-// Initialize
-logStatus('🟡 Requesting local media...');
-
+log("Getting local media...");
 navigator.mediaDevices.getUserMedia({ video: true, audio: true })
   .then(stream => {
     localStream = stream;
     localVideo.srcObject = stream;
-    logStatus('🟢 Local media stream acquired.');
+    log("Local stream ready");
     socket.emit("join", room);
-    logStatus(`📡 Joining room: ${room}`);
   })
-  .catch(error => {
-    logStatus(`❌ Failed to get local media: ${error.message}`);
-  });
+  .catch(err => log("Media error: " + err));
 
-// Socket Events
-socket.on("joined", () => {
-  logStatus('✅ Successfully joined the room.');
-  createPeerConnection();
-  // localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
-  peerConnection.createOffer()
-    .then(offer => {
-      peerConnection.setLocalDescription(offer);
-      socket.emit("offer", { room, offer });
-      logStatus('📤 Sent offer to peer.');
-    });
+socket.on("all-users", users => {
+  log("Existing users: " + users);
+  users.forEach(createOfferForUser);
 });
 
-socket.on("offer", ({ offer }) => {
-  logStatus('📥 Received offer from peer.');
-  createPeerConnection();
-  peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
-  // localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
-  peerConnection.createAnswer()
-    .then(answer => {
-      peerConnection.setLocalDescription(answer);
-      socket.emit("answer", { room, answer });
-      logStatus('📤 Sent answer to peer.');
-    });
+socket.on("new-user", userId => {
+  log("New user joined: " + userId);
 });
 
-socket.on("answer", ({ answer }) => {
-  logStatus('📥 Received answer from peer.');
-  peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+socket.on("offer", async ({ from, offer }) => {
+  const peer = createPeerConnection(from);
+  await peer.setRemoteDescription(new RTCSessionDescription(offer));
+  localStream.getTracks().forEach(t => peer.addTrack(t, localStream));
+  const answer = await peer.createAnswer();
+  await peer.setLocalDescription(answer);
+  socket.emit("answer", { to: from, answer });
+  log("Answered offer from " + from);
 });
 
-socket.on("ice-candidate", ({ candidate }) => {
-  if (candidate) {
-    logStatus('📥 Received ICE candidate.');
-    peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+socket.on("answer", async ({ from, answer }) => {
+  const peer = peers.get(from);
+  await peer.setRemoteDescription(new RTCSessionDescription(answer));
+  log("Answer received from " + from);
+});
+
+socket.on("ice-candidate", ({ from, candidate }) => {
+  const peer = peers.get(from);
+  if (peer) {
+    peer.addIceCandidate(new RTCIceCandidate(candidate));
+    log("ICE candidate from " + from);
   }
 });
 
-function createPeerConnection() {
-  if (peerConnection) return;
+socket.on("user-left", userId => {
+  log("User left: " + userId);
+  const vid = document.getElementById(userId);
+  if (vid) vid.remove();
+  const peer = peers.get(userId);
+  if (peer) peer.close();
+  peers.delete(userId);
+});
 
-  peerConnection = new RTCPeerConnection(config);
-  logStatus('🔧 PeerConnection created.');
+function createPeerConnection(userId) {
+  const peer = new RTCPeerConnection(config);
+  peers.set(userId, peer);
 
-  // 🔥 Add local tracks ONCE here
-  localStream.getTracks().forEach(track => {
-    peerConnection.addTrack(track, localStream);
-  });
-
-  peerConnection.onicecandidate = event => {
-    if (event.candidate) {
-      socket.emit("ice-candidate", { room, candidate: event.candidate });
-      logStatus('📤 Sent ICE candidate.');
+  peer.onicecandidate = e => {
+    if (e.candidate) {
+      socket.emit("ice-candidate", { to: userId, candidate: e.candidate });
     }
   };
 
-  peerConnection.ontrack = event => {
-    if (!remoteStream) {
-      remoteStream = new MediaStream();
-      remoteVideo.srcObject = remoteStream;
-      logStatus('📺 Remote video stream initialized.');
+  peer.ontrack = e => {
+    let vid = document.getElementById(userId);
+    if (!vid) {
+      vid = document.createElement("video");
+      vid.id = userId;
+      vid.autoplay = true;
+      vid.playsInline = true;
+      videos.appendChild(vid);
     }
-    remoteStream.addTrack(event.track);
-    logStatus('📡 Remote track received and added.');
+    vid.srcObject = e.streams[0];
   };
+
+  return peer;
 }
 
+function createOfferForUser(userId) {
+  const peer = createPeerConnection(userId);
+  localStream.getTracks().forEach(t => peer.addTrack(t, localStream));
+  peer.createOffer().then(offer => {
+    peer.setLocalDescription(offer);
+    socket.emit("offer", { to: userId, offer });
+    log("Offer sent to " + userId);
+  });
+}
 
-// 🧠 Logger Panel
-function logStatus(message) {
-  console.log(message);
-  const logDiv = document.getElementById('logPanel');
-  if (logDiv) {
-    const entry = document.createElement('div');
-    entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
-    logDiv.appendChild(entry);
-    logDiv.scrollTop = logDiv.scrollHeight; // Auto-scroll
-  }
+function log(msg) {
+  console.log(msg);
+  const entry = document.createElement("div");
+  entry.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+  logPanel.appendChild(entry);
+  logPanel.scrollTop = logPanel.scrollHeight;
 }

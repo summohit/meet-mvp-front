@@ -15,4 +15,10 @@
     text-align: center;
     margin-top: 10px;
   }
-  
+
+  #logPanel {
+    position: fixed; bottom: 10px; right: 10px;
+    background: rgba(0,0,0,0.7); color: #0f0;
+    font-family: monospace; padding: 8px;
+    max-height: 150px; overflow-y: auto;
+  }
