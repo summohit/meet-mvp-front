@@ -1,5 +1,5 @@
-// const socket = io("https://ttu-meet-mvp-node.onrender.com");
-const socket = io("http://localhost:3000");
+const socket = io("https://ttu-meet-mvp-node.onrender.com");
+// const socket = io("http://localhost:3000");
 
 // DOM elements
 const authSection = document.getElementById("authSection");
