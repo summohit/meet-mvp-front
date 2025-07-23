@@ -45,7 +45,7 @@ navigator.mediaDevices.getUserMedia({ video: true, audio: true })
 socket.on("joined", () => {
   logStatus('✅ Successfully joined the room.');
   createPeerConnection();
-  localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+  // localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
   peerConnection.createOffer()
     .then(offer => {
       peerConnection.setLocalDescription(offer);
@@ -58,7 +58,7 @@ socket.on("offer", ({ offer }) => {
   logStatus('📥 Received offer from peer.');
   createPeerConnection();
   peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
-  localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+  // localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
   peerConnection.createAnswer()
     .then(answer => {
       peerConnection.setLocalDescription(answer);
@@ -85,6 +85,11 @@ function createPeerConnection() {
   peerConnection = new RTCPeerConnection(config);
   logStatus('🔧 PeerConnection created.');
 
+  // 🔥 Add local tracks ONCE here
+  localStream.getTracks().forEach(track => {
+    peerConnection.addTrack(track, localStream);
+  });
+
   peerConnection.onicecandidate = event => {
     if (event.candidate) {
       socket.emit("ice-candidate", { room, candidate: event.candidate });
@@ -102,6 +107,7 @@ function createPeerConnection() {
     logStatus('📡 Remote track received and added.');
   };
 }
+
 
 // 🧠 Logger Panel
 function logStatus(message) {
