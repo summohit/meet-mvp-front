@@ -8,20 +8,20 @@ let remoteStream;
 let peerConnection;
 
 const config = {
-  // iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
-   iceServers : [
-      { urls: 'stun:uatstun.tingtingu.com:3478' },
-      {
-        urls: 'turns:uatturn.tingtingu.com:5349?transport=udp',
-        username: 'admin',
-        credential: '12345'
-      },
-      {
-        urls: 'turns:uatturn.tingtingu.com:5349?transport=tcp',
-        username: 'admin',
-        credential: '12345'
-      }
-  ]
+  iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
+  //  iceServers : [
+  //     { urls: 'stun:uatstun.tingtingu.com:3478' },
+  //     {
+  //       urls: 'turns:uatturn.tingtingu.com:5349?transport=udp',
+  //       username: 'admin',
+  //       credential: '12345'
+  //     },
+  //     {
+  //       urls: 'turns:uatturn.tingtingu.com:5349?transport=tcp',
+  //       username: 'admin',
+  //       credential: '12345'
+  //     }
+  // ]
 };
 
 const room = "test-room";
